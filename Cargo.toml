@@ -1,5 +1,11 @@
 [package]
 name = "discord-rpc-helper"
+description = "Automatically sets Discord activity based on running Proton games"
+homepage = "https://github.com/kekonn/discord-rpc-helper"
+repository = "https://github.com/kekonn/discord-rpc-helper"
+readme = "README.md"
+keywords = ["discord", "rpc", "steam", "proton"]
+categories = ["games"]
 version = "1.0.1"
 edition = "2021"
 authors = ["kekkon"]
