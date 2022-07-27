@@ -34,7 +34,7 @@ impl Configuration {
 fn get_config_path() -> Result<PathBuf> {
     let config_home = match std::env::var("XDG_CONFIG_HOME") {
         Ok(e) => e,
-        Err(err) => return Err(anyhow!(err)),
+        Err(err) => return Err(anyhow!("Error trying to read env var XDG_CONFIG_HOME: {}", err)),
     };
 
     let config_path = Path::new(config_home.as_str()).join("discord-rpc-helper").join("config.json");

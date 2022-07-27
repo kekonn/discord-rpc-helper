@@ -1,28 +1,38 @@
-mod steam;
-mod discord;
 mod config;
 pub mod constants;
+mod discord;
+mod steam;
 
+use crate::discord::{Client, DiscordClient};
+use anyhow::{anyhow, bail, Result};
+use config::Configuration;
 use std::{borrow::BorrowMut, time::Duration};
 use steam::{scanner::get_running_steam_games, SteamApp};
-use config::Configuration;
-use anyhow::{Result, anyhow, bail};
-use tokio::{signal, sync::broadcast::{self, Receiver}};
-use crate::discord::{Client, DiscordClient};
+use tokio::{
+    signal,
+    sync::broadcast::{self, Receiver},
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let (shutdown_send, mut shutdown_recv) = broadcast::channel(5);
 
     println!("Reading config.json");
-    let config = Configuration::from_file("config.json").unwrap();
+    let config = match Configuration::from_file("config.json") {
+        Ok(c) => c,
+        Err(e) => {
+            bail!("Error loading configuration: {}", e);
+        }
+    };
 
     println!("Found client id {}", config.discord_client_id);
 
     println!("Starting to monitor for Steam games...");
 
     tokio::spawn(async move {
-        detection_loop(shutdown_recv.borrow_mut(), config.clone()).await.unwrap();
+        detection_loop(shutdown_recv.borrow_mut(), config.clone())
+            .await
+            .unwrap();
     });
 
     match signal::ctrl_c().await {
@@ -46,12 +56,12 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
             Ok(c) => {
                 client = c;
                 break;
-            },
+            }
             Err(e) => {
                 println!("{}. Retrying in 1 minute", e);
                 tokio::time::sleep(long_sleep).await;
                 client_result = Client::new(&config.discord_client_id).await;
-            },
+            }
         };
     }
 
@@ -59,7 +69,6 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
 
     let mut running_id = constants::NO_APPID;
     loop {
-
         // Check connection before setting game activity
         // Not important when first entering the loop, but discord could be closed in between the first check and setting activity
         match client.check_connection().await {
@@ -68,7 +77,7 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
                 running_id = constants::NO_APPID;
                 tokio::time::sleep(long_sleep).await;
                 continue;
-            },
+            }
             _ => (),
         }
 
@@ -82,7 +91,7 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
                     Err(e) => {
                         println!("Error clearing activity: {}", e);
                         constants::NO_APPID
-                    },
+                    }
                 };
             }
             0 if running_id == constants::NO_APPID => {}
@@ -94,7 +103,7 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
                         Err(e) => {
                             println!("Error setting activity: {}", e);
                             constants::NO_APPID
-                        },
+                        }
                     };
                 }
             }
@@ -118,7 +127,11 @@ async fn clear_activity(client: &mut Client) -> Result<()> {
 }
 
 async fn set_activity(client: &mut Client, game: &SteamApp) -> Result<()> {
-    println!("Found game {} ({}). Setting activity...", game.get_name().await?, game.app_id);
+    println!(
+        "Found game {} ({}). Setting activity...",
+        game.get_name().await?,
+        game.app_id
+    );
     client.set_activity(&game).await
 }
 
