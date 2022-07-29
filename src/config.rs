@@ -33,12 +33,12 @@ impl Configuration {
     /// Validates the loaded configuration on a functional level.
     /// 
     /// Returns a list of errors (`Vec<&String>`). If the list is empty, then the configuration is valid.
-    pub fn validate(&self) -> Vec<&str> {
-        let mut errors = Vec::<&str>::new();
+    pub fn validate(&self) -> Vec<String> {
+        let mut errors = Vec::<String>::new();
 
         if self.discord_client_id.is_empty()
         {
-            errors.push("discord_client_id is empty.");
+            errors.push("discord_client_id is empty.".to_owned());
         }
 
         return errors;

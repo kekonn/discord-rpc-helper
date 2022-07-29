@@ -25,6 +25,13 @@ async fn main() -> Result<()> {
         }
     };
 
+    match validate_config(&config) {
+        Ok(()) => (),
+        Err(errors) => {
+            bail!(errors)
+        }
+    };
+
     println!("Found client id {}", config.discord_client_id);
 
     println!("Starting to monitor for Steam games...");
@@ -140,4 +147,20 @@ fn get_games() -> Result<Vec<SteamApp>> {
         Ok(games) => Ok(games),
         Err(err) => Err(anyhow!("Error trying to find steam games: {}", err)),
     }
+}
+
+fn validate_config(config: &Configuration) -> Result<()> {
+    let validation_result = config.validate();
+
+    if validation_result.is_empty() {
+        return Ok(());
+    }
+
+    let err_msg = validation_result
+        .iter()
+        .fold(String::from("Error messages:"), |acc, x| {
+            format!("{}\n\t- {}", acc, x)
+        });
+
+    return Err(anyhow!(err_msg));
 }
