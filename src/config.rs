@@ -29,6 +29,20 @@ impl Configuration {
 
         self::from_string(&conf_str)
     }
+
+    /// Validates the loaded configuration on a functional level.
+    /// 
+    /// Returns a list of errors (`Vec<&String>`). If the list is empty, then the configuration is valid.
+    pub fn validate(&self) -> Vec<&str> {
+        let mut errors = Vec::<&str>::new();
+
+        if self.discord_client_id.is_empty()
+        {
+            errors.push("discord_client_id is empty.");
+        }
+
+        return errors;
+    }
 }
 
 fn get_config_path() -> Result<PathBuf> {
@@ -56,8 +70,18 @@ fn from_string(conf_str: &str) -> Result<Configuration> {
 mod tests {
     use std::path::Path;
 
-    use super::get_config_path;
+    use super::{get_config_path, Configuration};
 
+    #[test]
+    fn detects_invalid_config() {
+        let config = Configuration {
+            discord_client_id: "".to_string()
+        };
+
+        let validation_result = config.validate();
+
+        assert!(!validation_result.is_empty());
+    }
 
     #[test]
     fn can_find_xdg_config_home() {
