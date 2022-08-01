@@ -1,5 +1,6 @@
 #[path = "../constants.rs"]
 mod constants;
+mod cache;
 
 pub mod scanner;
 
