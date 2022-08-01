@@ -29,12 +29,26 @@ impl Configuration {
 
         self::from_string(&conf_str)
     }
+
+    /// Validates the loaded configuration on a functional level.
+    /// 
+    /// Returns a list of errors (`Vec<&String>`). If the list is empty, then the configuration is valid.
+    pub fn validate(&self) -> Vec<String> {
+        let mut errors = Vec::<String>::new();
+
+        if self.discord_client_id.is_empty()
+        {
+            errors.push("discord_client_id is empty.".to_owned());
+        }
+
+        return errors;
+    }
 }
 
 fn get_config_path() -> Result<PathBuf> {
     let config_home = match std::env::var("XDG_CONFIG_HOME") {
         Ok(e) => e,
-        Err(err) => return Err(anyhow!(err)),
+        Err(err) => return Err(anyhow!("Error trying to read env var XDG_CONFIG_HOME: {}", err)),
     };
 
     let config_path = Path::new(config_home.as_str()).join("discord-rpc-helper").join("config.json");
@@ -56,8 +70,18 @@ fn from_string(conf_str: &str) -> Result<Configuration> {
 mod tests {
     use std::path::Path;
 
-    use super::get_config_path;
+    use super::{get_config_path, Configuration};
 
+    #[test]
+    fn detects_invalid_config() {
+        let config = Configuration {
+            discord_client_id: "".to_string()
+        };
+
+        let validation_result = config.validate();
+
+        assert!(!validation_result.is_empty());
+    }
 
     #[test]
     fn can_find_xdg_config_home() {
