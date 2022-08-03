@@ -22,7 +22,8 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "RUST_BACKTRACE": "full"
+                "RUST_BACKTRACE": "1",
+                "XDG_CONFIG_HOME": "${workspaceFolder}/.config"
             }
         },
         {
@@ -44,7 +45,8 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "RUST_BACKTRACE": "full"
+                "RUST_BACKTRACE": "full",
+                "XDG_CONFIG_HOME": "${workspaceFolder}/.config"
             }
         }
     ]
