@@ -41,7 +41,7 @@ impl DocumentCacheBuilder {
     pub fn build(self) -> Result<DocumentCache> {
         match self.location {
             Some(l) => {
-                match is_valid_location(l.as_str()) {
+                match create_cache_dir(l.as_str()) {
                     Ok(path) => Ok(DocumentCache { location: path }),
                     Err(e) => Err(anyhow!("Error building document cache: {}", e)),
                 }
@@ -55,7 +55,7 @@ impl DocumentCacheBuilder {
 }
 
 /// Tries to detect or create a valid cache dir location
-fn is_valid_location(path_str: &str) -> Result<String> {
+fn create_cache_dir(path_str: &str) -> Result<String> {
     let mut path = PathBuf::new();
     path.push(path_str);
 
@@ -91,6 +91,8 @@ fn get_runtime_path() -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
 
     // builder tests
@@ -102,16 +104,16 @@ mod tests {
     }
 
     #[test]
-    fn is_valid_location_root_fails() {
-        let result = is_valid_location("/");
+    fn create_cache_dir_in_root_fails() {
+        let result = create_cache_dir("/");
 
         assert!(result.is_err());
     }
 
     #[test]
-    fn is_valid_location_relative_creates_dirs() {
+    fn create_cache_dir_relative_creates_dirs() {
 
-        let result = is_valid_location("./");
+        let result = create_cache_dir("./");
 
         assert!(result.is_ok(), "{}", result.err().unwrap());
         
@@ -124,7 +126,7 @@ mod tests {
 
         std::fs::create_dir_all("./discord-rpc-helper").unwrap();
 
-        let result = is_valid_location("./discord-rpc-helper");
+        let result = create_cache_dir("./discord-rpc-helper");
 
         assert!(result.is_ok(), "{}", result.err().unwrap());
         
