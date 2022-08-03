@@ -1,3 +1,5 @@
 /target
 .idea
 config.json
+/.config
+/.run
