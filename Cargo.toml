@@ -19,7 +19,7 @@ include = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sysinfo = "^0.24"
+sysinfo = "^0.25"
 anyhow = "^1"
 discord-sdk = "^0.3"
 scraper = "^0.13"
