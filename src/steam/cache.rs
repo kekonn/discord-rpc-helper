@@ -1,8 +1,8 @@
 
 use std::{path::{PathBuf, Path}};
 use anyhow::{Result, anyhow};
-use reqwest::Url;
 use scraper::{Selector, ElementRef, Html};
+use url::Url;
 
 // XDG RUNTIME HOME
 
@@ -21,7 +21,7 @@ pub struct DocumentCache {
 impl DocumentCache {
     async fn get_name(&self, steam_url: &str) -> Result<String> {
         let name_selector = Selector::parse(STEAM_NAME_SELECTOR).unwrap();
-        let html = match self.download_steamdb_page(&steam_url).await {
+        let html = match self.download_steamdb_page(steam_url).await {
             Ok(h) => get_html(&h),
             Err(err) => return Err(anyhow!(err)),
         };
@@ -36,7 +36,7 @@ impl DocumentCache {
     
     async fn get_appicon(&self, steam_url: &str) -> Result<String> {
         let img_selector = Selector::parse(STEAM_ICON_SELECTOR).unwrap();
-        let html = match self.download_steamdb_page(&steam_url).await {
+        let html = match self.download_steamdb_page(steam_url).await {
             Ok(h) => get_html(&h),
             Err(e) => return Err(anyhow!(e)),
         };
@@ -60,20 +60,22 @@ impl DocumentCache {
     }
 
     fn get_cache_path(&self, url: &str) -> Result<PathBuf> {
-        let steamid_url_part = Url::parse(url)?.path_segments()
-                        .ok_or_else(err)
-                        .into_iter().last().ok_or(anyhow!("Could not find path segments in url \"{}\"", url))?;
+        let parsed_url = Url::parse(url)?;
+        let steamid_url_part = parsed_url.path_segments()
+            .unwrap_or_else(|| panic!("Could not find path in url {}", url))
+            .find_map(|p| p.parse::<i64>().ok())
+            .unwrap_or_else(|| panic!("Could not find steam id in url {}", url));
 
-        let path_buff = self.get_location_pathbuf();
+        let mut path_buff = self.get_location_pathbuf();
 
-        path_buff.push(format!("{}.html", steamid_url_part.));
+        path_buff.push(format!("{}.html", steamid_url_part));
 
-        path_buff
+        Ok(path_buff)
     }
 
     /// Create `PathBuf` from `DocumentCache.location`
     fn get_location_pathbuf(&self) -> PathBuf {
-        let path_buff = PathBuf::new();
+        let mut path_buff = PathBuf::new();
 
         path_buff.push(&self.location);
 
