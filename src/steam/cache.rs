@@ -1,8 +1,9 @@
 
-use std::{path::{PathBuf, Path}};
-use anyhow::{Result, anyhow};
+use std::path::PathBuf;
+use anyhow::{Result, anyhow, Context};
 use scraper::{Selector, ElementRef, Html};
 use url::Url;
+use tokio::fs::{read_to_string, write};
 
 // XDG RUNTIME HOME
 
@@ -12,16 +13,23 @@ const CACHE_DIR: &str = "cache";
 const STEAM_NAME_SELECTOR: &str = "#appHubAppName";
 const STEAM_ICON_SELECTOR: &str = "div.apphub_AppIcon img";
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DocumentCache {
     /// The location of the document cache in the file system
     location: String,
 }
 
 impl DocumentCache {
-    async fn get_name(&self, steam_url: &str) -> Result<String> {
+
+    /// Get a game's name.
+    /// 
+    /// Returns `anyhow::Result<String>`
+    /// 
+    /// Parameters:
+    /// * `steam_url: &str`: the url of the game's steam store page
+    pub async fn get_name(&self, steam_url: &str) -> Result<String> {
         let name_selector = Selector::parse(STEAM_NAME_SELECTOR).unwrap();
-        let html = match self.download_steamdb_page(steam_url).await {
+        let html = match self.get_steamdb_page(steam_url).await {
             Ok(h) => get_html(&h),
             Err(err) => return Err(anyhow!(err)),
         };
@@ -34,12 +42,15 @@ impl DocumentCache {
         }
     }
     
-    async fn get_appicon(&self, steam_url: &str) -> Result<String> {
+    /// Get a game's app icon
+    /// 
+    /// Returns `anyhow::Result<String>` as url
+    /// 
+    /// Parameters:
+    /// * `steam_url: &str`: the url of the game's steam store page
+    pub async fn get_appicon(&self, steam_url: &str) -> Result<String> {
         let img_selector = Selector::parse(STEAM_ICON_SELECTOR).unwrap();
-        let html = match self.download_steamdb_page(steam_url).await {
-            Ok(h) => get_html(&h),
-            Err(e) => return Err(anyhow!(e)),
-        };
+        let html = self.get_steamdb_page(steam_url).await.map(|h| get_html(&h))?;
     
         let found_elements: Vec<ElementRef> = html.select(&img_selector).collect();
         match found_elements.len() {
@@ -49,22 +60,30 @@ impl DocumentCache {
         }
     }
     
-    /// Downloads the given url or provides it from cache, if available
-    async fn download_steamdb_page(&self, url: &str) -> anyhow::Result<String> {
-        let document = match reqwest::get(url).await {
-            Ok(r) => r.text().await.unwrap(),
-            Err(err) => return Err(anyhow!(err)),
-        };
+    /// Downloads the given url, if available
+    async fn get_steamdb_page(&self, url: &str) -> Result<String> {
+        // Check if cache exists
+        let cache_path = self.get_cache_path(url)?;
+
+        match cache_path.try_exists()? {
+            true => Ok(read_to_string(&cache_path).await?),
+            false => {
+                // get supposed cache path
+                let document = reqwest::get(url).await?.text().await?;
     
-        Ok(document)
+                write(&cache_path, &document).await?;
+
+                return Ok(document)
+            }
+        }
     }
 
     fn get_cache_path(&self, url: &str) -> Result<PathBuf> {
         let parsed_url = Url::parse(url)?;
         let steamid_url_part = parsed_url.path_segments()
-            .unwrap_or_else(|| panic!("Could not find path in url {}", url))
+            .with_context(|| format!("Could not find path in url {}", url))?
             .find_map(|p| p.parse::<i64>().ok())
-            .unwrap_or_else(|| panic!("Could not find steam id in url {}", url));
+            .with_context(|| format!("Could not find steam id in url {}", url))?;
 
         let mut path_buff = self.get_location_pathbuf();
 
@@ -116,16 +135,8 @@ impl DocumentCacheBuilder {
     /// This consumes the builder.
     pub fn build(self) -> Result<DocumentCache> {
         match self.location {
-            Some(l) => {
-                match create_cache_dir(l.as_str()) {
-                    Ok(path) => Ok(DocumentCache { location: path }),
-                    Err(e) => Err(anyhow!("Error building document cache: {}", e)),
-                }
-            },
-            None => match get_runtime_path() {
-                Ok(p) => Ok(DocumentCache { location: p}),
-                Err(e) => Err(e),
-            },
+            Some(l) => create_cache_dir(l.as_str()).with_context(|| "Error building document cache").map(|p| DocumentCache { location: p}),
+            None => get_runtime_path().map(|p| DocumentCache { location: p})
         }
     }
 }
@@ -146,22 +157,15 @@ fn create_cache_dir(path_str: &str) -> Result<String> {
         path.push(CACHE_DIR);
     }
 
-    if path.is_dir() {
-        Ok(path.to_string_lossy().to_string())
-    } else {
-        match std::fs::create_dir_all(&path) {
-            Ok(_) => Ok(path.to_string_lossy().to_string()),
-            Err(e) => Err(anyhow!(e)),
-        }
+    match path.is_dir() {
+        true => Ok(path.to_string_lossy().to_string()),
+        false => std::fs::create_dir_all(&path).with_context(|| format!("Error creating directory '{}'", path.to_string_lossy())).and(Ok(path.to_string_lossy().to_string())),
     }
 }
 
 /// Gets the runtime directory
 fn get_runtime_path() -> Result<String> {
-    match std::env::var(XDG_RUNTIME_ENV_VAR) {
-        Ok(path) => Ok(path),
-        Err(e) => Err(anyhow!("Error reading variable \"{}\": {}", XDG_RUNTIME_ENV_VAR, e)),
-    }
+    std::env::var(XDG_RUNTIME_ENV_VAR).with_context(|| format!("Error reading variable {}", XDG_RUNTIME_ENV_VAR))
 }
 
 

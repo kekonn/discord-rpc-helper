@@ -2,21 +2,19 @@ mod cache;
 
 pub mod scanner;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use constants::{APPID_ENV_KEY, NO_APPID, STEAM_GAME_PATH_FRAGMENT};
-use scraper::{ElementRef, Html, Selector};
 use sysinfo::{Process, ProcessExt};
-use super::constants;
+use self::cache::DocumentCache;
 
-const STEAM_NAME_SELECTOR: &str = "#appHubAppName";
-const STEAM_ICON_SELECTOR: &str = "div.apphub_AppIcon img";
+use super::constants;
 
 /// Describes functionalities of a Steam Proton process
 trait SteamProcess: ProcessExt {
     /// Returns the Steam game's AppId
     fn steam_appid(&self) -> u32;
     /// Returns the path of the game executable
-    fn steam_path(&self) -> Result<Option<&String>, &'static str>;
+    fn steam_path(&self) -> Result<Option<String>>;
 }
 
 impl SteamProcess for Process {
@@ -29,19 +27,20 @@ impl SteamProcess for Process {
         }
     }
 
-    fn steam_path(&self) -> Result<Option<&String>, &'static str> {
-        let filtered: Vec<&String> = self
+    fn steam_path(&self) -> Result<Option<String>> {
+        let filtered: Vec<&str> = self
             .cmd()
-            .iter()
-            .filter(|c| c.contains(STEAM_GAME_PATH_FRAGMENT) && c.ends_with(".exe"))
+            .into_iter()
+            .filter_map(|c| match c.contains(STEAM_GAME_PATH_FRAGMENT) && c.ends_with(".exe") {
+                true => Some(c.as_str()),
+                false => None,
+            })
             .collect();
 
-        let len = filtered.len();
-
-        match len {
+        match filtered.len() {
             0 => Ok(None),
-            1 => Ok(Some(filtered[0])),
-            _ => Err("Found more than 1 possible path"),
+            1 => Ok(Some(filtered[0].to_owned())),
+            _ => Err(anyhow!("Found multiple possible paths for process '{:?}'", self.name()))
         }
     }
 }
@@ -51,6 +50,7 @@ pub struct SteamApp {
     pub app_id: u32,
     pub path: String,
     pub running_since: u64,
+    cache: DocumentCache
 }
 
 impl SteamApp {
@@ -74,89 +74,58 @@ impl SteamApp {
     }
 
     /// Try to resolve the game's name by scraping the store page
-    pub async fn get_name(&self) -> anyhow::Result<String> {
+    pub async fn get_name(&self) -> Result<String> {
         let steam_url = self.get_steam_url();
-        get_name_cached(steam_url.as_str()).await
+        self.cache.get_name(steam_url.as_str()).await
     }
 
     /// Gets the url to the game's icon
-    pub async fn get_app_icon_url(&self) -> anyhow::Result<String> {
+    pub async fn get_app_icon_url(&self) -> Result<String> {
         let steam_url = self.get_steam_url();
-        get_appicon_cached(steam_url.as_str()).await
+        self.cache.get_appicon(steam_url.as_str()).await
     }
-}
-
-async fn get_name_cached(steam_url: &str) -> anyhow::Result<String> {
-    let name_selector = Selector::parse(STEAM_NAME_SELECTOR).unwrap();
-    let html = match download_steamdb_page(&steam_url).await {
-        Ok(h) => get_html(&h),
-        Err(err) => return Err(anyhow!(err)),
-    };
-
-    let found_elements: Vec<ElementRef> = html.select(&name_selector).collect();
-    match found_elements.len() {
-        0 => Err(anyhow!("Could not find any name elements on page")),
-        1 => Ok(found_elements[0].inner_html()),
-        _ => Err(anyhow!("Found more than one name element on the page")),
-    }
-}
-
-async fn get_appicon_cached(steam_url: &str) -> anyhow::Result<String> {
-    let img_selector = Selector::parse(STEAM_ICON_SELECTOR).unwrap();
-    let html = match download_steamdb_page(&steam_url).await {
-        Ok(h) => get_html(&h),
-        Err(e) => return Err(anyhow!(e)),
-    };
-
-    let found_elements: Vec<ElementRef> = html.select(&img_selector).collect();
-    match found_elements.len() {
-        0 => Err(anyhow!("Could not find the icon image on the page")),
-        1 => Ok(found_elements[0].value().attr("src").unwrap().to_string()),
-        _ => Err(anyhow!("Found more than one app icon on the page")),
-    }
-}
-
-fn get_html(html: &str) -> Html {
-    Html::parse_document(html)
-}
-
-async fn download_steamdb_page(url: &str) -> anyhow::Result<String> {
-    let document = match reqwest::get(url).await {
-        Ok(r) => r.text().await.unwrap(),
-        Err(err) => return Err(anyhow!(err)),
-    };
-
-    Ok(document)
 }
 
 #[cfg(test)]
 mod tests {
 
+    use crate::steam::cache::DocumentCacheBuilder;
     use super::SteamApp;
+    use anyhow::Result;
 
     #[test]
-    fn steamapp_renders_store_url() {
+    fn steamapp_renders_store_url() -> Result<()> {
+        let cache = DocumentCacheBuilder::new().build()?;
+
         let app = SteamApp {
             app_id: 1,
             path: String::from(""),
             running_since: 18,
+            cache
         };
 
         let store_url = app.get_steam_url();
 
         assert_eq!(store_url, "https://store.steampowered.com/app/1/");
+
+        Ok(())
     }
 
     #[test]
-    fn steamapp_renders_steamdb_url() {
+    fn steamapp_renders_steamdb_url() -> Result<()> {
+        let cache = DocumentCacheBuilder::new().build()?;
+
         let app = SteamApp {
             app_id: 1,
             path: String::from(""),
             running_since: 18,
+            cache
         };
 
         let steamdb_url = app.get_steamdb_url();
 
         assert_eq!(steamdb_url, "https://steamdb.info/app/1/");
+
+        Ok(())
     }
 }
