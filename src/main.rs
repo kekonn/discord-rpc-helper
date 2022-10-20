@@ -1,7 +1,7 @@
 mod config;
-pub mod constants;
 mod discord;
 mod steam;
+mod constants;
 
 use crate::discord::{Client, DiscordClient};
 use anyhow::{anyhow, bail, Result};

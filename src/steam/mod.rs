@@ -1,5 +1,3 @@
-#[path = "../constants.rs"]
-mod constants;
 mod cache;
 
 pub mod scanner;
@@ -8,6 +6,7 @@ use anyhow::anyhow;
 use constants::{APPID_ENV_KEY, NO_APPID, STEAM_GAME_PATH_FRAGMENT};
 use scraper::{ElementRef, Html, Selector};
 use sysinfo::{Process, ProcessExt};
+use super::constants;
 
 const STEAM_NAME_SELECTOR: &str = "#appHubAppName";
 const STEAM_ICON_SELECTOR: &str = "div.apphub_AppIcon img";
