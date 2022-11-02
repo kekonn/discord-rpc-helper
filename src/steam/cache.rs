@@ -136,7 +136,7 @@ impl DocumentCacheBuilder {
     pub fn build(self) -> Result<DocumentCache> {
         match self.location {
             Some(l) => create_cache_dir(l.as_str()).with_context(|| "Error building document cache").map(|p| DocumentCache { location: p}),
-            None => get_runtime_path().map(|p| DocumentCache { location: p})
+            None => create_cache_dir(get_runtime_path().expect("Could not determine XDG_RUNTIME_DIR").as_str()).map(|p| DocumentCache { location: p})
         }
     }
 }
@@ -153,6 +153,9 @@ fn create_cache_dir(path_str: &str) -> Result<String> {
     if path.ends_with(super::constants::APP_NAME) {
         path.push(CACHE_DIR);
     } else if !path.ends_with(CACHE_DIR) {
+        path.push(super::constants::APP_NAME);
+        path.push(CACHE_DIR);
+    } else {
         path.push(super::constants::APP_NAME);
         path.push(CACHE_DIR);
     }

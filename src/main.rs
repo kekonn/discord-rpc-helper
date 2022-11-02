@@ -117,12 +117,12 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
 
         tokio::select! {
             biased;
+            _ = tokio::time::sleep(sleep_dur) => {},
             _ = shutdown_recv.recv() => {
                 println!("Shutting down and clearing activity");
                 _ = clear_activity(&mut client).await;
                 break
-            },
-            _ = tokio::time::sleep(sleep_dur) => {},
+            }
         };
     }
 
