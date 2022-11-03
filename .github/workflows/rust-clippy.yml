@@ -10,8 +10,6 @@
 name: rust-clippy analyze
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "main", "!dependabot/**" ]
@@ -20,7 +18,7 @@ on:
 
 jobs:
   rust-clippy-analyze:
-    name: Run rust-clippy analyzing
+    name: Analyze code with clippy
     runs-on: ubuntu-latest
     permissions:
       contents: read
