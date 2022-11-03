@@ -1,6 +1,6 @@
-use super::*;
+use super::{*, cache::DocumentCacheBuilder};
 use sysinfo::{Process, ProcessExt, RefreshKind, System, SystemExt};
-use anyhow::{Result};
+use anyhow::Result;
 
 /// Returns true if the process was started with wine64-preloader
 fn filter_process(proc: &Process) -> bool {
@@ -8,15 +8,17 @@ fn filter_process(proc: &Process) -> bool {
 }
 
 fn process_to_steamapp(steamproc: &Process) -> Option<SteamApp> {
-    let path = match steamproc.steam_path().unwrap() {
-        None => return None,
-        Some(p) => p,
-    };
+    let path = steamproc.steam_path()
+        .unwrap_or(None)
+        .unwrap();
     
+    let cache = DocumentCacheBuilder::new().build().expect("Error creating the document cache");
+
     Some(SteamApp {
         app_id: steamproc.steam_appid(),
         path: path.to_owned(),
-        running_since: steamproc.run_time()
+        running_since: steamproc.run_time(),
+        cache
     })
 }
 
