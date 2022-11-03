@@ -1,7 +1,7 @@
 mod config;
-pub mod constants;
 mod discord;
 mod steam;
+mod constants;
 
 use crate::discord::{Client, DiscordClient};
 use anyhow::{anyhow, bail, Result};
@@ -37,13 +37,12 @@ async fn main() -> Result<()> {
     println!("Starting to monitor for Steam games...");
 
     tokio::spawn(async move {
-        detection_loop(shutdown_recv.borrow_mut(), config.clone())
-            .await
-            .unwrap();
+        detection_loop(shutdown_recv.borrow_mut(), config.clone()).await.unwrap();
     });
 
     match signal::ctrl_c().await {
         Ok(_) => {
+            println!("Received shutdown event. Sending shutdown signals (can take up to 1 minute)");
             shutdown_send.send(())?;
         }
         Err(e) => bail!("Error catching Ctrl-C signal: {}", e),
@@ -65,7 +64,7 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
                 break;
             }
             Err(e) => {
-                println!("{}. Retrying in 1 minute", e);
+                println!("{:?}. Retrying in 1 minute", e);
                 tokio::time::sleep(long_sleep).await;
                 client_result = Client::new(&config.discord_client_id).await;
             }
@@ -73,19 +72,16 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
     }
 
     let sleep_dur = Duration::from_secs(10);
-
     let mut running_id = constants::NO_APPID;
+
     loop {
         // Check connection before setting game activity
         // Not important when first entering the loop, but discord could be closed in between the first check and setting activity
-        match client.check_connection().await {
-            Err(e) => {
-                println!("Connection check failed: {}. Trying again in 1 minute", e);
-                running_id = constants::NO_APPID;
-                tokio::time::sleep(long_sleep).await;
-                continue;
-            }
-            _ => (),
+        if let Err(e) = client.check_connection().await {
+            println!("Connection check failed: {:?}. Trying again in 1 minute", e);
+            running_id = constants::NO_APPID;
+            tokio::time::sleep(long_sleep).await;
+            continue;
         }
 
         let running_games = get_games()?;
@@ -96,7 +92,7 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
                 running_id = match clear_activity(&mut client).await {
                     Ok(_) => constants::NO_APPID,
                     Err(e) => {
-                        println!("Error clearing activity: {}", e);
+                        println!("Error clearing activity: {:?}", e);
                         constants::NO_APPID
                     }
                 };
@@ -108,7 +104,7 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
                     running_id = match set_activity(&mut client, game).await {
                         Ok(_) => game.app_id,
                         Err(e) => {
-                            println!("Error setting activity: {}", e);
+                            println!("Error setting activity: {:?}", e);
                             constants::NO_APPID
                         }
                     };
@@ -117,12 +113,13 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
         };
 
         tokio::select! {
+            biased;
             _ = tokio::time::sleep(sleep_dur) => {},
             _ = shutdown_recv.recv() => {
                 println!("Shutting down and clearing activity");
                 _ = clear_activity(&mut client).await;
                 break
-            },
+            }
         };
     }
 
@@ -139,7 +136,7 @@ async fn set_activity(client: &mut Client, game: &SteamApp) -> Result<()> {
         game.get_name().await?,
         game.app_id
     );
-    client.set_activity(&game).await
+    client.set_activity(game).await
 }
 
 fn get_games() -> Result<Vec<SteamApp>> {
@@ -162,5 +159,5 @@ fn validate_config(config: &Configuration) -> Result<()> {
             format!("{}\n\t- {}", acc, x)
         });
 
-    return Err(anyhow!(err_msg));
+    Err(anyhow!(err_msg))
 }

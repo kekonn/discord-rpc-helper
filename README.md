@@ -15,6 +15,10 @@ You will also need to provide your own discord client id. Make sure `XDG_CONFIG_
 }
 ```
 
+## Caching directory
+
+We scan for `XDG_RUNTIME_DIR` and create a folder in there. This means the cache does not persist between reboots. In the future there will be an option to configure the cache path.
+
 ## Running the service automatically on login (systemd service)
 
 Create `$HOME/.config/systemd/user/discord-rpc-helper.service` and paste the following:
@@ -37,3 +41,4 @@ Make sure to change YOURUSERNAME to the username that you used to run `cargo ins
 After that run `systemctl --user daemon-reload` and `systemctl --user enable --now discord-rpc-helper.service`.
 
 Check if everything is running by running `systemctl --user status discord-rpc-helper.service`.
+

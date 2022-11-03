@@ -25,8 +25,7 @@ impl DiscordClient for Client {
         match client.connect() {
             Ok(_) => Ok(Self {
                 client_id: client_id.to_owned(),
-                pres_client: Some(client),
-                rpc_client: None,
+                pres_client: Some(client)
             }),
             Err(e) => Err(anyhow!("Error connecting to Discord: {}", e)),
         }

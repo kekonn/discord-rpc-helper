@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, Context};
 use std::{fs, path::{Path, PathBuf}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -25,7 +25,7 @@ impl Configuration {
         let config_path = path.to_str().unwrap();
 
         let conf_str = fs::read_to_string(config_path)
-            .expect(format!("Error reading config file {}", config_path).as_str());
+            .unwrap_or_else(|_| panic!("Error reading config file {}", config_path));
 
         self::from_string(&conf_str)
     }
@@ -41,15 +41,12 @@ impl Configuration {
             errors.push("discord_client_id is empty.".to_owned());
         }
 
-        return errors;
+        errors
     }
 }
 
 fn get_config_path() -> Result<PathBuf> {
-    let config_home = match std::env::var("XDG_CONFIG_HOME") {
-        Ok(e) => e,
-        Err(err) => return Err(anyhow!("Error trying to read env var XDG_CONFIG_HOME: {}", err)),
-    };
+    let config_home = std::env::var("XDG_CONFIG_HOME").with_context(|| "Error trying to read env var XDG_CONFIG_HOME")?;
 
     let config_path = Path::new(config_home.as_str()).join("discord-rpc-helper").join("config.json");
 
@@ -68,7 +65,8 @@ fn from_string(conf_str: &str) -> Result<Configuration> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+
+    use anyhow::anyhow;
 
     use super::{get_config_path, Configuration};
 
@@ -82,22 +80,12 @@ mod tests {
 
         assert!(!validation_result.is_empty());
     }
-
-    #[test]
-    fn can_find_xdg_config_home() {
-        let config_home = std::env::var("XDG_CONFIG_HOME").unwrap();
-
-        let path = Path::new(config_home.as_str());
-        
-        assert!(path.exists());
-        assert!(path.is_dir());
-    }
-
+    
     #[test]
     fn can_find_config_file() {
         let config_path = get_config_path();
 
-        assert!(config_path.is_ok());
+        assert!(config_path.is_ok(), "Error searching for config file: {:?}", config_path.err().unwrap_or_else(|| anyhow!("No error")));
     }
 
     #[test]
