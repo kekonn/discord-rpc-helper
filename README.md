@@ -1,5 +1,8 @@
 # discord-rpc-helper
-Helps set Steam game activity as a Discord activity
+
+**DISCLAIMER**: Discord has changed it's RPC api, so this tool is currently broken.
+
+Helps set Steam game activity as a Discord activity.
 
 ## Installation
 
