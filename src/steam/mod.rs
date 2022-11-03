@@ -22,7 +22,7 @@ impl SteamProcess for Process {
         let appid_environ = self.environ().iter().find(|e| e.starts_with(APPID_ENV_KEY));
 
         match appid_environ {
-            Some(id) => id.split("=").last().unwrap().parse::<u32>().unwrap(),
+            Some(id) => id.split('=').last().unwrap().parse::<u32>().unwrap(),
             None => NO_APPID,
         }
     }
@@ -30,7 +30,7 @@ impl SteamProcess for Process {
     fn steam_path(&self) -> Result<Option<String>> {
         let filtered: Vec<&str> = self
             .cmd()
-            .into_iter()
+            .iter()
             .filter_map(|c| match c.contains(STEAM_GAME_PATH_FRAGMENT) && c.ends_with(".exe") {
                 true => Some(c.as_str()),
                 false => None,
