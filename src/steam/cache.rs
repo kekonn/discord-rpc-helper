@@ -73,7 +73,7 @@ impl DocumentCache {
     
                 write(&cache_path, &document).await?;
 
-                return Ok(document)
+                Ok(document)
             }
         }
     }
@@ -151,9 +151,6 @@ fn create_cache_dir(path_str: &str) -> Result<String> {
     }
 
     if path.ends_with(super::constants::APP_NAME) {
-        path.push(CACHE_DIR);
-    } else if !path.ends_with(CACHE_DIR) {
-        path.push(super::constants::APP_NAME);
         path.push(CACHE_DIR);
     } else {
         path.push(super::constants::APP_NAME);
