@@ -2,15 +2,12 @@ pub mod discord_presence;
 
 use super::steam::*;
 use anyhow::{Result};
-use discord_sdk as ds;
 use std::time::{Duration, SystemTime};
 use async_trait::async_trait;
 
 
 pub struct Client  {
     pub client_id: String,
-    #[allow(dead_code)]
-    rpc_client: Option<ds::Discord>,
     pres_client: Option<discord_rich_presence::DiscordIpcClient>
 }
 
@@ -24,5 +21,5 @@ pub trait DiscordClient {
 
 #[allow(dead_code)]
 fn to_timestamp(dur: Duration, ref_time: Option<SystemTime>) -> SystemTime {
-    ref_time.unwrap_or(SystemTime::now()) - dur
+    ref_time.unwrap_or_else(SystemTime::now) - dur
 }

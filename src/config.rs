@@ -85,7 +85,7 @@ mod tests {
     fn can_find_config_file() {
         let config_path = get_config_path();
 
-        assert!(config_path.is_ok(), "Error searching for config file: {:?}", config_path.err().unwrap_or(anyhow!("No error")));
+        assert!(config_path.is_ok(), "Error searching for config file: {:?}", config_path.err().unwrap_or_else(|| anyhow!("No error")));
     }
 
     #[test]

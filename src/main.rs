@@ -77,14 +77,11 @@ async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration)
     loop {
         // Check connection before setting game activity
         // Not important when first entering the loop, but discord could be closed in between the first check and setting activity
-        match client.check_connection().await {
-            Err(e) => {
-                println!("Connection check failed: {:?}. Trying again in 1 minute", e);
-                running_id = constants::NO_APPID;
-                tokio::time::sleep(long_sleep).await;
-                continue;
-            }
-            _ => (),
+        if let Err(e) = client.check_connection().await {
+            println!("Connection check failed: {:?}. Trying again in 1 minute", e);
+            running_id = constants::NO_APPID;
+            tokio::time::sleep(long_sleep).await;
+            continue;
         }
 
         let running_games = get_games()?;
@@ -139,7 +136,7 @@ async fn set_activity(client: &mut Client, game: &SteamApp) -> Result<()> {
         game.get_name().await?,
         game.app_id
     );
-    client.set_activity(&game).await
+    client.set_activity(game).await
 }
 
 fn get_games() -> Result<Vec<SteamApp>> {
@@ -162,5 +159,5 @@ fn validate_config(config: &Configuration) -> Result<()> {
             format!("{}\n\t- {}", acc, x)
         });
 
-    return Err(anyhow!(err_msg));
+    Err(anyhow!(err_msg))
 }
