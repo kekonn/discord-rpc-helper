@@ -16,17 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
         
     - name: Get current crate version
       id: crateVersion
       # Command to run
-      run: echo "cargo_version=$(cargo-metadata --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version')" >> $GITHUB_OUTPUT
+      run: echo "cargo_version=$(cargo metadata --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version')" >> $GITHUB_OUTPUT
       
     - name: Bump version and push tag
       id: tag_version
