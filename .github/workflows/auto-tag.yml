@@ -21,7 +21,7 @@ jobs:
       id: crateVersion
       # Command to run
       run: 
-        cargo metadata -q --no-deps --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version' | tr -d \" >> version.txt
+        cargo metadata -q --no-deps --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version' | tr -d \" | tee version.txt
         echo "cargo_version=$(cat version.txt)" >> $GITHUB_OUTPUT
       
     - name: Bump version and push tag
