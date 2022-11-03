@@ -20,11 +20,13 @@ jobs:
     - name: Get current crate version
       id: crateVersion
       # Command to run
-      run: echo "cargo_version=$(cargo metadata --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version')" >> $GITHUB_OUTPUT
+      run: 
+        cargo metadata -q --no-deps --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version' | tr -d \" >> version.txt
+        echo "cargo_version=$(cat version.txt)" >> $GITHUB_OUTPUT
       
     - name: Bump version and push tag
       id: tag_version
       uses: mathieudutour/github-tag-action@v6.0
       with:
         github_token: ${{ github.token }}
-        custom_tag: ${{ steps.crateVersion.outputs.stdout }}
+        custom_tag: ${{ steps.crateVersion.outputs.cargo_version }}
