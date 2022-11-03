@@ -1,0 +1,31 @@
+name: Rust
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get current crate version
+      # You may pin to the exact commit or the version.
+      # uses: mathiasvr/command-output@8dbf451add3db114df0114aa5e21a1efef8c5015
+      uses: mathiasvr/command-output@v1.1.0
+      id: crateVersion
+      with:
+        # Command to run
+        run: cargo-metadata --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version'
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v6.0
+      with:
+        github_token: ${{ github.token }}
+        custom_tag: ${{ steps.crateVersion.outputs.stdout }}
