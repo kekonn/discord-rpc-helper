@@ -16,11 +16,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-        
+    
+    - name: Build crate
+      run: cargo build
+
     - name: Get current crate version
       id: crateVersion
       # Command to run
-      run: echo "cargo_version=$(cargo metadata -q --no-deps --format-version 1 | jq '.packages[] | select(.name == \"discord-rpc-helper\") | .version' | tr -d \")" >> $GITHUB_OUTPUT
+      run: 
+        cargo metadata -q --no-deps --format-version 1 | jq '.packages[] | select(.name == "discord-rpc-helper") | .version' | tr -d \" | tee version.txt ;
+        echo "cargo_version=$(cat version.txt)" >> $GITHUB_OUTPUT ;
       
     - name: Bump version and push tag
       id: tag_version
