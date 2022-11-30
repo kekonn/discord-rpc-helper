@@ -1,16 +1,18 @@
 mod config;
-mod discord;
 mod steam;
 mod constants;
 
-use crate::discord::{Client, DiscordClient};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{ anyhow, bail, Result };
 use config::Configuration;
-use std::{borrow::BorrowMut, time::Duration};
-use steam::{scanner::get_running_steam_games, SteamApp};
-use tokio::{
-    signal,
-    sync::broadcast::{self, Receiver},
+use std::{ borrow::BorrowMut, time::Duration };
+use steam::{ scanner::get_running_steam_games, SteamApp };
+use tokio::{ signal, sync::broadcast::{ self, Receiver } };
+use discord_sdk::{
+    Discord,
+    DiscordApp,
+    Subscriptions,
+    wheel::Wheel,
+    activity::{ ActivityBuilder },
 };
 
 #[tokio::main]
@@ -28,13 +30,11 @@ async fn main() -> Result<()> {
     match validate_config(&config) {
         Ok(()) => (),
         Err(errors) => {
-            bail!(errors)
+            bail!(errors);
         }
-    };
+    }
 
     println!("Found client id {}", config.discord_client_id);
-
-    println!("Starting to monitor for Steam games...");
 
     tokio::spawn(async move {
         detection_loop(shutdown_recv.borrow_mut(), config.clone()).await.unwrap();
@@ -46,97 +46,81 @@ async fn main() -> Result<()> {
             shutdown_send.send(())?;
         }
         Err(e) => bail!("Error catching Ctrl-C signal: {}", e),
-    };
+    }
 
     Ok(())
 }
 
 async fn detection_loop(shutdown_recv: &mut Receiver<()>, config: Configuration) -> Result<()> {
-    let mut client_result = Client::new(&config.discord_client_id).await;
-    let mut client: Client;
-    let long_sleep = Duration::from_secs(60);
+    let (wheel, handler) = Wheel::new(
+        Box::new(|err| {
+            println!("Discord SDK error: {:?}", err);
+        })
+    );
+    let discord = Discord::new(
+        DiscordApp::PlainId(config.discord_client_id.parse()?),
+        Subscriptions::ACTIVITY,
+        Box::new(handler)
+    )?;
 
-    // Wait for connection before starting game detection
-    loop {
-        match client_result {
-            Ok(c) => {
-                client = c;
-                break;
-            }
-            Err(e) => {
-                println!("{:?}. Retrying in 1 minute", e);
-                tokio::time::sleep(long_sleep).await;
-                client_result = Client::new(&config.discord_client_id).await;
-            }
-        };
-    }
+    let mut user = wheel.user();
+
+    println!("Waiting for handshake from Discord SDK");
+    user.0.changed().await?;
+    println!("Connected to Discord");
 
     let sleep_dur = Duration::from_secs(10);
     let mut running_id = constants::NO_APPID;
 
-    loop {
-        // Check connection before setting game activity
-        // Not important when first entering the loop, but discord could be closed in between the first check and setting activity
-        if let Err(e) = client.check_connection().await {
-            println!("Connection check failed: {:?}. Trying again in 1 minute", e);
-            running_id = constants::NO_APPID;
-            tokio::time::sleep(long_sleep).await;
-            continue;
-        }
+    println!("Starting to monitor for Steam games...");
 
+    loop {
         let running_games = get_games()?;
 
         match running_games.len() {
             0 if running_id != constants::NO_APPID => {
                 println!("Game no longer running. Clearing activity...");
-                running_id = match clear_activity(&mut client).await {
-                    Ok(_) => constants::NO_APPID,
-                    Err(e) => {
-                        println!("Error clearing activity: {:?}", e);
-                        constants::NO_APPID
-                    }
-                };
+                running_id = discord.clear_activity().await.map(|_| constants::NO_APPID)?;
             }
             0 if running_id == constants::NO_APPID => {}
             _ => {
                 let game = &running_games[0];
+
                 if running_id != game.app_id {
-                    running_id = match set_activity(&mut client, game).await {
-                        Ok(_) => game.app_id,
-                        Err(e) => {
-                            println!("Error setting activity: {:?}", e);
-                            constants::NO_APPID
-                        }
-                    };
+                    let game_name = game.get_name().await?;
+                    println!("Setting activity to game {}", &game_name);
+
+                    running_id = discord
+                        .update_activity(
+                            ActivityBuilder::default()
+                            .start_timestamp(game.running_since)
+                            .details(format!("Playing {:?}", game_name))
+                        )
+                        .await
+                        .map(|res| {
+                            if res.is_some() {
+                                game.app_id
+                            } else {
+                                println!("Error setting activity");
+                                constants::NO_APPID
+                            }
+                        })?;
                 }
             }
-        };
+        }
 
         tokio::select! {
             biased;
             _ = tokio::time::sleep(sleep_dur) => {},
             _ = shutdown_recv.recv() => {
                 println!("Shutting down and clearing activity");
-                _ = clear_activity(&mut client).await;
+                _ = discord.clear_activity().await?;
                 break
             }
-        };
+        }
     }
 
     Ok(())
-}
-
-async fn clear_activity(client: &mut Client) -> Result<()> {
-    client.clear_activity().await
-}
-
-async fn set_activity(client: &mut Client, game: &SteamApp) -> Result<()> {
-    println!(
-        "Found game {} ({}). Setting activity...",
-        game.get_name().await?,
-        game.app_id
-    );
-    client.set_activity(game).await
 }
 
 fn get_games() -> Result<Vec<SteamApp>> {
@@ -155,9 +139,7 @@ fn validate_config(config: &Configuration) -> Result<()> {
 
     let err_msg = validation_result
         .iter()
-        .fold(String::from("Error messages:"), |acc, x| {
-            format!("{}\n\t- {}", acc, x)
-        });
+        .fold(String::from("Error messages:"), |acc, x| { format!("{}\n\t- {}", acc, x) });
 
     Err(anyhow!(err_msg))
 }
