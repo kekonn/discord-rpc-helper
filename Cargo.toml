@@ -7,7 +7,7 @@ readme = "README.md"
 license-file = "LICENSE.md"
 keywords = ["discord", "rpc", "steam", "proton"]
 categories = ["games"]
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 authors = ["kekkon"]
 include = [
@@ -20,15 +20,15 @@ include = [
 
 [dependencies]
 sysinfo = "^0.26"
-anyhow = "^1"
+anyhow = "1.0"
 scraper = "^0.13"
 reqwest = {version = "^0.11"}
 tokio = {version = "1", features = ["signal", "fs", "sync", "macros", "rt-multi-thread", "io-util", "io-std"]}
 serde = {version = "^1", features = ["default", "derive"]}
 serde_json = "^1"
 async-trait = "^0.1"
-discord-rich-presence = "^0.2"
 url = "^2"
+discord-sdk = "0.3"
 
 [profile.release]
 opt-level = "s"

@@ -49,17 +49,12 @@ impl SteamProcess for Process {
 pub struct SteamApp {
     pub app_id: u32,
     pub path: String,
-    pub running_since: u64,
+    pub running_since: i64,
     cache: DocumentCache
 }
 
 impl SteamApp {
     #[allow(dead_code)]
-    /// Gets the SteamDb Url for the game
-    pub fn get_steamdb_url(&self) -> String {
-        format!("https://steamdb.info/app/{}/", self.app_id)
-    }
-
     /// Gets the url to the poster image of the game
     pub fn get_large_poster_url(&self) -> String {
         format!(
@@ -79,6 +74,7 @@ impl SteamApp {
         self.cache.get_name(steam_url.as_str()).await
     }
 
+    #[allow(dead_code)]
     /// Gets the url to the game's icon
     pub async fn get_app_icon_url(&self) -> Result<String> {
         let steam_url = self.get_steam_url();
@@ -107,24 +103,6 @@ mod tests {
         let store_url = app.get_steam_url();
 
         assert_eq!(store_url, "https://store.steampowered.com/app/1/");
-
-        Ok(())
-    }
-
-    #[test]
-    fn steamapp_renders_steamdb_url() -> Result<()> {
-        let cache = DocumentCacheBuilder::new().build()?;
-
-        let app = SteamApp {
-            app_id: 1,
-            path: String::from(""),
-            running_since: 18,
-            cache
-        };
-
-        let steamdb_url = app.get_steamdb_url();
-
-        assert_eq!(steamdb_url, "https://steamdb.info/app/1/");
 
         Ok(())
     }

@@ -17,7 +17,7 @@ fn process_to_steamapp(steamproc: &Process) -> Option<SteamApp> {
     Some(SteamApp {
         app_id: steamproc.steam_appid(),
         path,
-        running_since: steamproc.run_time(),
+        running_since: steamproc.run_time() as i64,
         cache
     })
 }
