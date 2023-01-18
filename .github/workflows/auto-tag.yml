@@ -36,7 +36,7 @@ jobs:
     - name: Check if version has actually increased
       run: |
         crate_version="v${{ steps.crateVersion.outputs.cargo_version }}";
-        if [[ -z "${{ steps.previoustag.outputs.tag }}"]] || [[ "${{ steps.previoustag.outputs.tag }}" == $crate_version ]];
+        if [[ "${{ steps.previoustag.outputs.tag }}" == "" ]] || [[ "${{ steps.previoustag.outputs.tag }}" == $crate_version ]];
         then
           echo "::error ::Crate version is still $crate_version";
           exit 1;
