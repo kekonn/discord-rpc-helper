@@ -21,7 +21,7 @@ include = [
 [dependencies]
 sysinfo = "0.27"
 anyhow = "1.0"
-scraper = "^0.13"
+scraper = "^0.14"
 reqwest = {version = "^0.11"}
 tokio = {version = "1", features = ["signal", "fs", "sync", "macros", "rt-multi-thread", "io-util", "io-std"]}
 serde = {version = "^1", features = ["default", "derive"]}
