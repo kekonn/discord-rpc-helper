@@ -15,6 +15,13 @@ include = [
     "**/*.md",
     "Cargo.toml"
 ]
+exclude = [
+    ".config",
+    ".devcontainer",
+    ".github",
+    ".idea",
+    ".vscode"
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -42,4 +49,5 @@ codegen-units = 1
 inherits = "release"
 debug = true
 split-debuginfo = "packed"
+
 
