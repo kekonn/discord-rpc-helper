@@ -25,7 +25,7 @@ impl Configuration {
         let config_path = path.to_str().unwrap();
 
         let conf_str = fs::read_to_string(config_path)
-            .unwrap_or_else(|_| panic!("Error reading config file {}", config_path));
+            .unwrap_or_else(|_| panic!("Error reading config file {config_path}"));
 
         self::from_string(&conf_str)
     }

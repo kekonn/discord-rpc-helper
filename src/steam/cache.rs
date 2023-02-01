@@ -81,13 +81,13 @@ impl DocumentCache {
     fn get_cache_path(&self, url: &str) -> Result<PathBuf> {
         let parsed_url = Url::parse(url)?;
         let steamid_url_part = parsed_url.path_segments()
-            .with_context(|| format!("Could not find path in url {}", url))?
+            .with_context(|| format!("Could not find path in url {url}"))?
             .find_map(|p| p.parse::<i64>().ok())
-            .with_context(|| format!("Could not find steam id in url {}", url))?;
+            .with_context(|| format!("Could not find steam id in url {url}"))?;
 
         let mut path_buff = self.get_location_pathbuf();
 
-        path_buff.push(format!("{}.html", steamid_url_part));
+        path_buff.push(format!("{steamid_url_part}.html"));
 
         Ok(path_buff)
     }
@@ -165,7 +165,7 @@ fn create_cache_dir(path_str: &str) -> Result<String> {
 
 /// Gets the runtime directory
 fn get_runtime_path() -> Result<String> {
-    std::env::var(XDG_RUNTIME_ENV_VAR).with_context(|| format!("Error reading variable {}", XDG_RUNTIME_ENV_VAR))
+    std::env::var(XDG_RUNTIME_ENV_VAR).with_context(|| format!("Error reading variable {XDG_RUNTIME_ENV_VAR}"))
 }
 
 
