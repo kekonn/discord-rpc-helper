@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
 
     match signal::ctrl_c().await {
         Ok(_) => {
-            info!("Received shutdown event. Sending shutdown signals (can take up to 1 minute)");
+            debug!("Received shutdown event. Sending shutdown signals (can take up to 1 minute)");
             shutdown_send.send(())?;
         }
         Err(e) => bail!("Error catching Ctrl-C signal: {}", e),

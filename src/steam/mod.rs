@@ -50,7 +50,8 @@ pub struct SteamApp {
     pub app_id: u32,
     pub path: String,
     pub running_since: i64,
-    cache: DocumentCache
+    pub exe_name: String,
+    cache: DocumentCache,
 }
 
 impl SteamApp {
@@ -95,9 +96,10 @@ mod tests {
 
         let app = SteamApp {
             app_id: 1,
-            path: String::from(""),
+            path: String::new(),
             running_since: 18,
-            cache
+            cache,
+            exe_name: String::new()
         };
 
         let store_url = app.get_steam_url();
