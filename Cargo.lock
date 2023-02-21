@@ -5,9 +5,7 @@ version = 3
 [[package]]
 name = "anyhow"
 version = "1.0.69"
-version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 
 [[package]]
@@ -574,9 +572,9 @@ dependencies = [
 
 [[package]]
 name = "gio"
-version = "0.17.0"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1981edf8679d2f2c8ec3120015867f45aa0a1c2d5e3e129ca2f7dda174d3d2a9"
+checksum = "65acfc24267314eee46f49e0a531e08fd6c3025040d1cfb4a7cd8e41c5e06116"
 dependencies = [
  "bitflags",
  "futures-channel",
@@ -607,9 +605,9 @@ dependencies = [
 
 [[package]]
 name = "glib"
-version = "0.17.0"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac347af59233f0544ce00a37bad50f4ac401d006505b26d80ad6d9bbecf6493f"
+checksum = "a78b6a0901e258cb03c761ca94c84d519427ede489cae12cd5ba0d7d584e69e9"
 dependencies = [
  "bitflags",
  "futures-channel",
@@ -630,9 +628,9 @@ dependencies = [
 
 [[package]]
 name = "glib-macros"
-version = "0.17.0"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5965ae1a44aa4bae4e1e6970f25b66c058fef873d2626c9932a41128dbeea03f"
+checksum = "55e93d79ed130f0f0b58bc0aa29fb0e40c9dfd63997fec51f8adf780d1520bc4"
 dependencies = [
  "anyhow",
  "heck",
@@ -645,9 +643,9 @@ dependencies = [
 
 [[package]]
 name = "glib-sys"
-version = "0.17.0"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ddcb73fa8236277bedadaaadb76aef49c85d66340f83bece244f46c2d4f0e01"
+checksum = "72a0985cf568e18cf63b443c9a14f4bdaa947fed7437476000dba84926a20b25"
 dependencies = [
  "libc",
  "system-deps",
@@ -666,9 +664,9 @@ dependencies = [
 
 [[package]]
 name = "graphene-rs"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "372514f21c7e342e0206a916d6bd522b15337578cfa68855518a3b4960ba8254"
+checksum = "21cf11565bb0e4dfc2f99d4775b6c329f0d40a2cff9c0066214d31a0e1b46256"
 dependencies = [
  "glib",
  "graphene-sys",
@@ -721,9 +719,9 @@ dependencies = [
 
 [[package]]
 name = "gtk4"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f61aa16bbd4554552645227d4249b58fd730b27985a7e0283fd0a2d479e954a8"
+checksum = "73421200ad9c3919d0720779b345b05d31a6ce9998e74fc27012f12580822e46"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -866,9 +864,7 @@ checksum = "c4a1e36c821dbe04574f602848a19f742f4fb3c98d40449f11bcad18d6b17421"
 [[package]]
 name = "hyper"
 version = "0.14.24"
-version = "0.14.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e011372fa0b68db8350aa7a248930ecc7839bf46d8485577d69f117a75f164c"
 checksum = "5e011372fa0b68db8350aa7a248930ecc7839bf46d8485577d69f117a75f164c"
 dependencies = [
  "bytes",
@@ -1469,9 +1465,7 @@ checksum = "dc375e1527247fe1a97d8b7156678dfe7c1af2fc075c9a4db3690ecd2a148068"
 [[package]]
 name = "proc-macro2"
 version = "1.0.51"
-version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d727cae5b39d21da60fa540906919ad737832fe0b1c165da3a34d6548c849d6"
 checksum = "5d727cae5b39d21da60fa540906919ad737832fe0b1c165da3a34d6548c849d6"
 dependencies = [
  "unicode-ident",
@@ -1808,9 +1802,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.92"
+version = "1.0.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7434af0dc1cbd59268aa98b4c22c131c0584d2232f6fb166efb993e2832e896a"
+checksum = "cad406b69c91885b5107daf2c29572f6c8cdb3c66826821e286c533490c0bc76"
 dependencies = [
  "itoa 1.0.5",
  "ryu",
@@ -1944,9 +1938,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.27.7"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "975fe381e0ecba475d4acff52466906d95b153a40324956552e027b2a9eaa89e"
+checksum = "727220a596b4ca0af040a07091e49f5c105ec8f2592674339a5bf35be592f76e"
 dependencies = [
  "cfg-if",
  "core-foundation-sys",
@@ -2023,11 +2017,10 @@ dependencies = [
 
 [[package]]
 name = "thread_local"
-version = "1.1.5"
+version = "1.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d805f96b7e61fce8728f142e213a3eb2f6b10538efff2d637c923efa4bfca048"
+checksum = "3fdd6f064ccff2d6567adcb3873ca630700f00b5ad3f060c25b5dcfd9a4ce152"
 dependencies = [
- "cfg-if",
  "cfg-if",
  "once_cell",
 ]
@@ -2060,9 +2053,7 @@ dependencies = [
 [[package]]
 name = "tinyvec_macros"
 version = "0.1.1"
-version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
@@ -2098,9 +2089,7 @@ dependencies = [
 [[package]]
 name = "tokio-native-tls"
 version = "0.3.1"
-version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 dependencies = [
  "native-tls",
