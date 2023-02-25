@@ -9,14 +9,17 @@ fn filter_process(proc: &Process) -> bool {
 
 fn process_to_steamapp(steamproc: &Process) -> Option<SteamApp> {
     let path = steamproc.steam_path()
-        .unwrap_or(None)
-        .unwrap();
+        .unwrap_or(None);
+
+    if path.is_none() {
+        return None;
+    }
     
     let cache = DocumentCacheBuilder::new().build().expect("Error creating the document cache");
 
     Some(SteamApp {
         app_id: steamproc.steam_appid(),
-        path,
+        path: path.unwrap(),
         running_since: steamproc.start_time() as i64,
         cache
     })
