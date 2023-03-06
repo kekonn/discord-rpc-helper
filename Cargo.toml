@@ -25,9 +25,9 @@ exclude = [
 
 [package.metadata.binstall]
 
-[package.metadata.dist]
+[workspace.metadata.dist]
 ci = ["github"]
-targets = ["x86_64-unknown-linux-gnu", "x86_64-apple-darwin"]
+targets = ["x86_64-unknown-linux-gnu"]
 installer = ["shell"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -35,7 +35,7 @@ installer = ["shell"]
 [dependencies]
 sysinfo = "0.28"
 anyhow = "1.0"
-scraper = "^0.14"
+scraper = "0.15.0"
 reqwest = {version = "^0.11"}
 tokio = {version = "1", features = ["signal", "fs", "sync", "macros", "rt-multi-thread", "io-util", "io-std"]}
 serde = {version = "^1", features = ["default", "derive"]}
