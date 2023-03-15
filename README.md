@@ -4,9 +4,11 @@ Helps set Steam game activity as a Discord activity.
 
 ## Installation
 
-Currently the only way to install is to clone the repo and run `cargo install --path .` from the repo's root directory.
+### Compile with cargo
 
-You will also need to provide your own discord client id. Make sure `XDG_CONFIG_HOME` is set and create `$XDG_CONFIG_HOME\discord-rpc-helper\config.json`.
+Clone the repo and run `cargo install --path .` from the repo's root directory.
+
+You will also need to provide your own Discord client id. Make sure `XDG_CONFIG_HOME` is set and create `$XDG_CONFIG_HOME\discord-rpc-helper\config.json`.
 
 ### Example config.json
 
@@ -15,6 +17,10 @@ You will also need to provide your own discord client id. Make sure `XDG_CONFIG_
   "discord_client_id": "11111111111111111111" 
 }
 ```
+
+### Cargo binstall
+
+We have added binstall support in version 1.1.7. If you have binstall installed (`cargo install cargo-binstall`) then you can install the service with `cargo binstall discord-rpc-helper`. After that, you can either run the helper from the terminal or follow the [systemd setup](#running-the-service-automatically-on-login-systemd-service) bellow.
 
 ## Caching directory
 
