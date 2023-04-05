@@ -15,13 +15,6 @@ include = [
     "**/*.md",
     "Cargo.toml"
 ]
-exclude = [
-    ".config",
-    ".devcontainer",
-    ".github",
-    ".idea",
-    ".vscode"
-]
 
 [package.metadata.binstall]
 
