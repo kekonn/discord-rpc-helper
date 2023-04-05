@@ -9,3 +9,4 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
      && apt-get -y upgrade
 
 RUN rustup update && rustup update stable
+RUN cargo install cargo-binstall
