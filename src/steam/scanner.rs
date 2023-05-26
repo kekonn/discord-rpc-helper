@@ -11,9 +11,7 @@ fn process_to_steamapp(steamproc: &Process) -> Option<SteamApp> {
     let path = steamproc.steam_path()
         .unwrap_or(None);
 
-    if path.is_none() {
-        return None;
-    }
+    path.as_ref()?;
     
     let cache = DocumentCacheBuilder::new().build().expect("Error creating the document cache");
 
