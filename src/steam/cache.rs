@@ -4,6 +4,7 @@ use anyhow::{Result, anyhow, Context};
 use scraper::{Selector, ElementRef, Html};
 use url::Url;
 use tokio::fs::{read_to_string, write};
+use html_escape::decode_html_entities;
 
 // XDG RUNTIME HOME
 
@@ -37,7 +38,7 @@ impl DocumentCache {
         let found_elements: Vec<ElementRef> = html.select(&name_selector).collect();
         match found_elements.len() {
             0 => Err(anyhow!("Could not find any name elements on page")),
-            1 => Ok(found_elements[0].inner_html()),
+            1 => Ok(decode_html_entities(found_elements[0].inner_html().as_str()).to_string()),
             _ => Err(anyhow!("Found more than one name element on the page")),
         }
     }
