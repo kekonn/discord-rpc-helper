@@ -22,7 +22,6 @@ include = [
 sysinfo = "0.28"
 anyhow = "1.0"
 scraper = "0.15.0"
-reqwest = {version = "^0.11"}
 tokio = {version = "1", features = ["signal", "fs", "sync", "macros", "rt-multi-thread", "io-util", "io-std"]}
 serde = {version = "^1", features = ["default", "derive"]}
 serde_json = "^1"
@@ -32,6 +31,11 @@ discord-sdk = "0.3"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 html-escape = "0.2.13"
+
+[dependencies.reqwest]
+version = "0.11"
+features = ["default", "gzip", "cookies"]
+
 
 [profile.release]
 opt-level = "s"
