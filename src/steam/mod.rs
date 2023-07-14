@@ -4,6 +4,7 @@ pub mod scanner;
 
 use anyhow::{anyhow, Result};
 use constants::{APPID_ENV_KEY, NO_APPID, STEAM_GAME_PATH_FRAGMENT};
+use once_cell::sync::OnceCell;
 use sysinfo::{Process, ProcessExt};
 use self::cache::DocumentCache;
 
@@ -45,12 +46,17 @@ impl SteamProcess for Process {
     }
 }
 
+static CACHE: OnceCell<DocumentCache> = OnceCell::new();
+
+fn get_cache() -> &'static DocumentCache {
+    CACHE.get_or_init(|| cache::DocumentCacheBuilder::new().build().expect("Error creating the document cache"))
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct SteamApp {
     pub app_id: u32,
     pub path: String,
     pub running_since: i64,
-    cache: DocumentCache
 }
 
 impl SteamApp {
@@ -71,33 +77,29 @@ impl SteamApp {
     /// Try to resolve the game's name by scraping the store page
     pub async fn get_name(&self) -> Result<String> {
         let steam_url = self.get_steam_url();
-        self.cache.get_name(steam_url.as_str()).await
+        get_cache().get_name(steam_url.as_str()).await
     }
 
     #[allow(dead_code)]
     /// Gets the url to the game's icon
     pub async fn get_app_icon_url(&self) -> Result<String> {
         let steam_url = self.get_steam_url();
-        self.cache.get_appicon(steam_url.as_str()).await
+        get_cache().get_appicon(steam_url.as_str()).await
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::steam::cache::DocumentCacheBuilder;
     use super::SteamApp;
     use anyhow::Result;
 
     #[test]
     fn steamapp_renders_store_url() -> Result<()> {
-        let cache = DocumentCacheBuilder::new().build()?;
-
         let app = SteamApp {
             app_id: 1,
             path: String::from(""),
             running_since: 18,
-            cache
         };
 
         let store_url = app.get_steam_url();
