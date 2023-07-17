@@ -12,7 +12,7 @@ use discord_sdk::{
     DiscordApp,
     Subscriptions,
     wheel::Wheel,
-    activity::{ ActivityBuilder }
+    activity::ActivityBuilder
 };
 use tracing::{debug, info, error, event, Level};
 

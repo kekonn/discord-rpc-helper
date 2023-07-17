@@ -49,3 +49,8 @@ After that run `systemctl --user daemon-reload` and `systemctl --user enable --n
 
 Check if everything is running by running `systemctl --user status discord-rpc-helper.service`.
 
+## Quirks and features
+
+### Steam Age Gate
+
+When a game requires an age gate to get to the Steam Store page, we handle the age gate by submitting an age of 1/1/1990.

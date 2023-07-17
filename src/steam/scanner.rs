@@ -1,4 +1,4 @@
-use super::{*, cache::DocumentCacheBuilder};
+use super::{*};
 use sysinfo::{Process, ProcessExt, RefreshKind, System, SystemExt};
 use anyhow::Result;
 
@@ -12,14 +12,11 @@ fn process_to_steamapp(steamproc: &Process) -> Option<SteamApp> {
         .unwrap_or(None);
 
     path.as_ref()?;
-    
-    let cache = DocumentCacheBuilder::new().build().expect("Error creating the document cache");
 
     Some(SteamApp {
         app_id: steamproc.steam_appid(),
         path: path.unwrap(),
         running_since: steamproc.start_time() as i64,
-        cache
     })
 }
 
