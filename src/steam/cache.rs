@@ -2,6 +2,7 @@
 use std::{path::PathBuf, sync::Arc, fs::File, io::{BufReader, BufWriter}, collections::HashMap};
 use anyhow::{Result, anyhow, Context};
 use scraper::{Selector, ElementRef, Html};
+use tracing::{event, Level};
 use url::Url;
 use tokio::fs::{read_to_string, write };
 use html_escape::decode_html_entities;
@@ -114,9 +115,6 @@ impl DocumentCache {
 
         let request = rest_client.get(url).build()?;
         let response = rest_client.execute(request).await?;
-        
-
-        
 
         let (resp_content, is_age_gate) ={ 
             let resp_html = get_html(response.text().await?.as_str());
@@ -133,8 +131,15 @@ impl DocumentCache {
 
         if is_age_gate {
             let app_id = Self::get_appid_from_url(url)?;
-            let resp_content = self.handle_agegate(app_id, &rest_client).await?;
-            Ok(resp_content)
+            if self.handle_agegate(app_id, &rest_client).await.is_ok() {
+                event!(Level::DEBUG, %app_id, "Redoing original request after handling age gate");
+                let request = rest_client.get(url).build()?;
+                let response = rest_client.execute(request).await?;
+
+                Ok(response.text().await?)
+            } else {
+                Err(anyhow!("Error handling the age gate"))
+            }
         }  else {
             Ok(resp_content)
         }
@@ -157,7 +162,8 @@ impl DocumentCache {
         }
     }
     
-    async fn handle_agegate(&self, app_id: i64, client: &reqwest::Client) -> Result<String> {
+    async fn handle_agegate(&self, app_id: i64, client: &reqwest::Client) -> Result<()> {
+        event!(Level::DEBUG, %app_id, "Handling age gate for {}", &app_id);
         let session_id = self.get_session_cookie_value()?;
         
         // time to lie about our age (or not, in some freak occurrences)
@@ -171,9 +177,15 @@ impl DocumentCache {
                 .form(&ageset_form)
                 .build()?;
 
-        let ageset_resp = client.execute(ageset_post).await?;
+        let ageset_resp = client.execute(ageset_post).await.with_context(|| "Error submitting information to age gate")?;
 
-        todo!()
+        if !ageset_resp.status().is_success() {
+            return Err(anyhow!("The server returned an error when trying to answer the age gate: {:?}", &ageset_resp.status()));
+        }
+
+        event!(Level::INFO, %app_id, "Successfully responded to age gate");
+
+        Ok(())
     }
 
     fn get_cache_path(&self, url: &str) -> Result<PathBuf> {
