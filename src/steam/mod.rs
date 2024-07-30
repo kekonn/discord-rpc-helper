@@ -5,13 +5,13 @@ pub mod scanner;
 use anyhow::{anyhow, Result};
 use constants::{APPID_ENV_KEY, NO_APPID, STEAM_GAME_PATH_FRAGMENT};
 use once_cell::sync::OnceCell;
-use sysinfo::{Process, ProcessExt};
+use sysinfo::{Process};
 use self::cache::DocumentCache;
 
 use super::constants;
 
 /// Describes functionalities of a Steam Proton process
-trait SteamProcess: ProcessExt {
+trait SteamProcess {
     /// Returns the Steam game's AppId
     fn steam_appid(&self) -> u32;
     /// Returns the path of the game executable

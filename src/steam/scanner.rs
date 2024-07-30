@@ -1,5 +1,5 @@
 use super::{*};
-use sysinfo::{Process, ProcessExt, RefreshKind, System, SystemExt};
+use sysinfo::{Process, RefreshKind, System};
 use anyhow::Result;
 
 /// Returns true if the process was started with wine64-preloader
