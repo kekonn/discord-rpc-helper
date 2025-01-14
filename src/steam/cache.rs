@@ -1,18 +1,25 @@
-
-use std::{path::PathBuf, sync::Arc, fs::File, io::{BufReader, BufWriter}, collections::HashMap};
-use anyhow::{Result, anyhow, Context};
-use scraper::{Selector, ElementRef, Html};
+use anyhow::{anyhow, Context, Result};
+use html_escape::decode_html_entities;
+use reqwest::cookie::Cookie;
+use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
+use scraper::{ElementRef, Html, Selector};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::PathBuf,
+    sync::Arc,
+};
+use tokio::fs::{read_to_string, write};
 use tracing::{event, Level};
 use url::Url;
-use tokio::fs::{read_to_string, write };
-use html_escape::decode_html_entities;
-use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 
 // XDG RUNTIME HOME
 
 const XDG_RUNTIME_ENV_VAR: &str = "XDG_RUNTIME_DIR";
 const CACHE_DIR: &str = "cache";
-const COOKIE_STORE_PATH: &str = "cookies.json";
+const COOKIE_STORE_PATH_OLD: &str = "cookies.json";
+const COOKIE_STORE_PATH: &str = "cookies";
 
 const STEAM_NAME_SELECTOR: &str = "#appHubAppName";
 const STEAM_ICON_SELECTOR: &str = "div.apphub_AppIcon img";
@@ -31,32 +38,48 @@ pub struct DocumentCache {
 }
 
 impl DocumentCache {
-
     /// Creates a new [DocumentCache](#DocumentCache) with the given location.
     pub fn new(cache_loc: String) -> Self {
         let mut location = PathBuf::new();
         location.push(&cache_loc);
-        
-        let cookie_store = {
-            location.push(COOKIE_STORE_PATH);
-            if let Ok(file) = File::open(&location).map(BufReader::new)
-            {
-                CookieStore::load_json(file).unwrap()
+
+        let mut new_store_path = location.clone();
+        new_store_path.push(COOKIE_STORE_PATH);
+        let mut old_store_path = location.clone();
+        old_store_path.push(COOKIE_STORE_PATH_OLD);
+
+        let cookie_store = if new_store_path.exists() {
+            if let Ok(store_reader) = File::open(new_store_path).map(BufReader::new) {
+                if old_store_path.exists() {
+                    std::fs::remove_file(&old_store_path).unwrap();
+                }
+                CookieStore::load(store_reader, |c| serde_json::from_str(c)).unwrap()
             } else {
                 CookieStore::new(None)
             }
+        } else if old_store_path.exists() {
+            if let Ok(store_reader) = File::open(old_store_path).map(BufReader::new) {
+                let store = CookieStore::load_json(store_reader).unwrap(); // deprecated, but this is for migration purposes only. Will be removed at a later date
+                store
+            } else {
+                CookieStore::new(None)
+            }
+        } else {
+            CookieStore::new(None)
         };
-        
-        let cookie_store = CookieStoreMutex::new(cookie_store);
-        let cookie_store = Arc::new(cookie_store);
 
-        Self { location: cache_loc, cookies: cookie_store }
+        let cookie_store = Arc::new(CookieStoreMutex::new(cookie_store));
+
+        Self {
+            location: cache_loc,
+            cookies: cookie_store,
+        }
     }
 
     /// Get a game's name.
-    /// 
+    ///
     /// Returns `anyhow::Result<String>`
-    /// 
+    ///
     /// Parameters:
     /// * `steam_url: &str`: the url of the game's steam store page
     pub async fn get_name(&self, steam_url: &str) -> Result<String> {
@@ -65,7 +88,7 @@ impl DocumentCache {
             Ok(h) => get_html(&h),
             Err(err) => return Err(anyhow!(err)),
         };
-    
+
         let found_elements: Vec<ElementRef> = html.select(&name_selector).collect();
         match found_elements.len() {
             0 => Err(anyhow!("Could not find any name elements on page")),
@@ -73,17 +96,17 @@ impl DocumentCache {
             _ => Err(anyhow!("Found more than one name element on the page")),
         }
     }
-    
+
     /// Get a game's app icon
-    /// 
+    ///
     /// Returns `anyhow::Result<String>` as url
-    /// 
+    ///
     /// Parameters:
     /// * `steam_url: &str`: the url of the game's steam store page
     pub async fn get_appicon(&self, steam_url: &str) -> Result<String> {
         let img_selector = Selector::parse(STEAM_ICON_SELECTOR).unwrap();
         let html = self.get_steam_page(steam_url).await.map(|h| get_html(&h))?;
-    
+
         let found_elements: Vec<ElementRef> = html.select(&img_selector).collect();
         match found_elements.len() {
             0 => Err(anyhow!("Could not find the icon image on the page")),
@@ -91,7 +114,7 @@ impl DocumentCache {
             _ => Err(anyhow!("Found more than one app icon on the page")),
         }
     }
-    
+
     /// Downloads the given url, if available
     async fn get_steam_page(&self, url: &str) -> Result<String> {
         // Check if cache exists
@@ -102,7 +125,7 @@ impl DocumentCache {
             false => {
                 // get supposed cache path
                 let document = self.download_steam_page(url).await?;
-    
+
                 write(&cache_path, &document).await?;
 
                 Ok(document)
@@ -111,18 +134,20 @@ impl DocumentCache {
     }
 
     async fn download_steam_page(&self, url: &str) -> Result<String> {
-        let rest_client = self.build_client().with_context(|| "Error building rest client for cache")?;
+        let rest_client = self
+            .build_client()
+            .with_context(|| "Error building rest client for cache")?;
 
         let request = rest_client.get(url).build()?;
         let response = rest_client.execute(request).await?;
 
-        let (resp_content, is_age_gate) ={ 
+        let (resp_content, is_age_gate) = {
             let resp_html = get_html(response.text().await?.as_str());
 
             let is_age_gate = {
                 let gate_selector = Selector::parse(AGEGATE_SELECTOR).unwrap();
                 let mut age_gate_div = resp_html.select(&gate_selector);
-    
+
                 age_gate_div.next().is_some()
             };
 
@@ -140,32 +165,37 @@ impl DocumentCache {
             } else {
                 Err(anyhow!("Error handling the age gate"))
             }
-        }  else {
+        } else {
             Ok(resp_content)
         }
     }
 
     fn build_client(&self) -> Result<reqwest::Client> {
         reqwest::ClientBuilder::new()
-                .cookie_provider(Arc::clone(&self.cookies)).
-                build().with_context(|| "Error building reqwest client")
+            .cookie_provider(Arc::clone(&self.cookies))
+            .build()
+            .with_context(|| "Error building reqwest client")
     }
 
     fn get_session_cookie_value(&self) -> Result<String> {
         let cookies = self.cookies.lock().unwrap();
 
-        if let Some(session_cookie) = cookies.get(SESSION_ID_COOKIE_DOMAIN, "/", SESSION_ID_COOKIE_NAME) {
+        if let Some(session_cookie) =
+            cookies.get(SESSION_ID_COOKIE_DOMAIN, "/", SESSION_ID_COOKIE_NAME)
+        {
             let cookie_value = session_cookie.value();
             Ok(cookie_value.to_owned())
         } else {
-            Err(anyhow!("We encountered an age gate, but did not manage to capture a session cookie yet"))
+            Err(anyhow!(
+                "We encountered an age gate, but did not manage to capture a session cookie yet"
+            ))
         }
     }
-    
+
     async fn handle_agegate(&self, app_id: i64, client: &reqwest::Client) -> Result<()> {
         event!(Level::DEBUG, %app_id, "Handling age gate for {}", &app_id);
         let session_id = self.get_session_cookie_value()?;
-        
+
         // time to lie about our age (or not, in some freak occurrences)
         let mut ageset_form = HashMap::new();
         ageset_form.insert("sessionid", session_id.as_str());
@@ -173,14 +203,21 @@ impl DocumentCache {
         ageset_form.insert("ageMonth", "January");
         ageset_form.insert("ageYear", "1990");
 
-        let ageset_post = client.post(format!("{}{}", AGESET_BASE_URL, app_id))
-                .form(&ageset_form)
-                .build()?;
+        let ageset_post = client
+            .post(format!("{}{}", AGESET_BASE_URL, app_id))
+            .form(&ageset_form)
+            .build()?;
 
-        let ageset_resp = client.execute(ageset_post).await.with_context(|| "Error submitting information to age gate")?;
+        let ageset_resp = client
+            .execute(ageset_post)
+            .await
+            .with_context(|| "Error submitting information to age gate")?;
 
         if !ageset_resp.status().is_success() {
-            return Err(anyhow!("The server returned an error when trying to answer the age gate: {:?}", &ageset_resp.status()));
+            return Err(anyhow!(
+                "The server returned an error when trying to answer the age gate: {:?}",
+                &ageset_resp.status()
+            ));
         }
 
         event!(Level::INFO, %app_id, "Successfully responded to age gate");
@@ -200,7 +237,8 @@ impl DocumentCache {
     fn get_appid_from_url(url: &str) -> Result<i64> {
         let parsed_url = Url::parse(url)?;
 
-        parsed_url.path_segments()
+        parsed_url
+            .path_segments()
             .with_context(|| format!("Could not find path in url {url}"))?
             .find_map(|p| p.parse::<i64>().ok())
             .with_context(|| format!("Could not find steam id in url {url}"))
@@ -216,7 +254,7 @@ impl DocumentCache {
     }
 
     /// Save cookies to temp location.
-    /// 
+    ///
     /// This allows to reuse age gates after app restarts.
     fn save_cookies(&self) {
         let mut writer = {
@@ -231,7 +269,9 @@ impl DocumentCache {
         };
 
         let store = self.cookies.lock().unwrap();
-        store.save_json(&mut writer).unwrap();
+        store
+            .save(&mut writer, |c| serde_json::to_string(c))
+            .unwrap()
     }
 }
 
@@ -240,23 +280,22 @@ impl Drop for DocumentCache {
         self.save_cookies();
     }
 }
-    
+
 /// Parsing a string into an HTML document
 fn get_html(html: &str) -> Html {
     Html::parse_document(html)
 }
 
 /// Builds a document cache.
-/// 
+///
 /// Defaults to using `XDG_RUNTIME_DIR`.
 pub struct DocumentCacheBuilder {
     location: Option<String>,
 }
 
 impl DocumentCacheBuilder {
-
     /// Creates a new `DocumentCacheBuilder` with default options set.
-    /// 
+    ///
     /// The default location is whatever `XDG_RUNTIME_DIR` points to.
     pub fn new() -> DocumentCacheBuilder {
         DocumentCacheBuilder { location: None }
@@ -274,8 +313,15 @@ impl DocumentCacheBuilder {
     /// This consumes the builder.
     pub fn build(self) -> Result<DocumentCache> {
         match self.location {
-            Some(l) => create_cache_dir(l.as_str()).with_context(|| "Error building document cache").map(DocumentCache::new),
-            None => create_cache_dir(get_runtime_path().expect("Could not determine XDG_RUNTIME_DIR").as_str()).map(DocumentCache ::new)
+            Some(l) => create_cache_dir(l.as_str())
+                .with_context(|| "Error building document cache")
+                .map(DocumentCache::new),
+            None => create_cache_dir(
+                get_runtime_path()
+                    .expect("Could not determine XDG_RUNTIME_DIR")
+                    .as_str(),
+            )
+            .map(DocumentCache::new),
         }
     }
 }
@@ -285,8 +331,12 @@ fn create_cache_dir(path_str: &str) -> Result<String> {
     let mut path = PathBuf::new();
     path.push(path_str);
 
-    if !path.is_dir() { // Also checks if the path exists
-        return Err(anyhow!("Path \"{}\" does not point to a directory.", path_str));
+    if !path.is_dir() {
+        // Also checks if the path exists
+        return Err(anyhow!(
+            "Path \"{}\" does not point to a directory.",
+            path_str
+        ));
     }
 
     if path.ends_with(super::constants::APP_NAME) {
@@ -298,15 +348,17 @@ fn create_cache_dir(path_str: &str) -> Result<String> {
 
     match path.is_dir() {
         true => Ok(path.to_string_lossy().to_string()),
-        false => std::fs::create_dir_all(&path).with_context(|| format!("Error creating directory '{}'", path.to_string_lossy())).and(Ok(path.to_string_lossy().to_string())),
+        false => std::fs::create_dir_all(&path)
+            .with_context(|| format!("Error creating directory '{}'", path.to_string_lossy()))
+            .and(Ok(path.to_string_lossy().to_string())),
     }
 }
 
 /// Gets the runtime directory
 fn get_runtime_path() -> Result<String> {
-    std::env::var(XDG_RUNTIME_ENV_VAR).with_context(|| format!("Error reading variable {XDG_RUNTIME_ENV_VAR}"))
+    std::env::var(XDG_RUNTIME_ENV_VAR)
+        .with_context(|| format!("Error reading variable {XDG_RUNTIME_ENV_VAR}"))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -318,9 +370,13 @@ mod tests {
     fn can_get_runtime_path_from_env() {
         let result = get_runtime_path();
 
-        assert!(&result.is_ok(), "Found error instead: {}", result.err().unwrap());
+        assert!(
+            &result.is_ok(),
+            "Found error instead: {}",
+            result.err().unwrap()
+        );
     }
-    
+
     #[test]
     #[ignore = "Running these automatically, they interfere because of the directories"]
     fn builds_with_default_location() -> Result<()> {
@@ -329,7 +385,11 @@ mod tests {
 
         let result = builder.build();
 
-        assert!(result.is_ok(), "Failed to build builder: {}", result.err().unwrap());
+        assert!(
+            result.is_ok(),
+            "Failed to build builder: {}",
+            result.err().unwrap()
+        );
         assert!(result?.location == runtime_path);
 
         Ok(())
@@ -342,7 +402,11 @@ mod tests {
 
         let result = builder.build();
 
-        assert!(result.is_ok(), "Failed to build builder: {}", result.err().unwrap());
+        assert!(
+            result.is_ok(),
+            "Failed to build builder: {}",
+            result.err().unwrap()
+        );
         assert_eq!(result?.location, "./discord-rpc-helper/cache");
 
         Ok(())
