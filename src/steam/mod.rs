@@ -20,7 +20,9 @@ trait SteamProcess {
 
 impl SteamProcess for Process {
     fn steam_appid(&self) -> u32 {
-        let appid_environ = self.environ().iter().find(|e| e.starts_with(APPID_ENV_KEY));
+        let appid_environ = self.environ()
+            .iter().filter_map(|e| e.to_str())
+            .find(|&e| e.starts_with(APPID_ENV_KEY));
 
         match appid_environ {
             Some(id) => id.split('=').last().unwrap().parse::<u32>().unwrap(),
@@ -31,9 +33,9 @@ impl SteamProcess for Process {
     fn steam_path(&self) -> Result<Option<String>> {
         let filtered: Vec<&str> = self
             .cmd()
-            .iter()
+            .iter().filter_map(|e| e.to_str())
             .filter_map(|c| match c.contains(STEAM_GAME_PATH_FRAGMENT) && c.ends_with(".exe") {
-                true => Some(c.as_str()),
+                true => Some(c),
                 false => None,
             })
             .collect();
