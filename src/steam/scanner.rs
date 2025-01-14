@@ -4,7 +4,7 @@ use anyhow::Result;
 
 /// Returns true if the process was started with wine64-preloader
 fn filter_process(proc: &Process) -> bool {
-    proc.name().to_ascii_lowercase() == "reaper"
+    proc.name().eq_ignore_ascii_case("reaper")
 }
 
 fn process_to_steamapp(steamproc: &Process) -> Option<SteamApp> {
