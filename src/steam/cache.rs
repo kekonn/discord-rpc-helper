@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Context, Result};
 use html_escape::decode_html_entities;
-use reqwest::cookie::Cookie;
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 use scraper::{ElementRef, Html, Selector};
 use std::{
