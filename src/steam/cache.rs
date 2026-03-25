@@ -54,17 +54,17 @@ impl DocumentCache {
                 }
                 CookieStore::load(store_reader, |c| serde_json::from_str(c)).unwrap()
             } else {
-                CookieStore::new(None)
+                CookieStore::new()
             }
         } else if old_store_path.exists() {
             if let Ok(store_reader) = File::open(old_store_path).map(BufReader::new) {
-                let store = CookieStore::load_json(store_reader).unwrap(); // deprecated, but this is for migration purposes only. Will be removed at a later date
+                let store = cookie_store::serde::json::load(store_reader).unwrap(); // deprecated, but this is for migration purposes only. Will be removed at a later date
                 store
             } else {
-                CookieStore::new(None)
+                CookieStore::new()
             }
         } else {
-            CookieStore::new(None)
+            CookieStore::new()
         };
 
         let cookie_store = Arc::new(CookieStoreMutex::new(cookie_store));
