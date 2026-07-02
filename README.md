@@ -1,6 +1,6 @@
 # discord-rpc-helper
 
-Helps set Steam game activity as a Discord activity.
+Helps set Steam game activity as a Discord activity. This repository is now archived since there are [much better options](https://www.gamingonlinux.com/2026/05/proton-cachyos-adds-low-latency-layer-and-discord-rich-presence-support/) now, so it seems pointless to just keep updating this.
 
 ## Installation
 
